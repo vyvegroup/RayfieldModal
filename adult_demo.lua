@@ -69,7 +69,7 @@ RayfieldModal:SetTheme("PinkPassion")
 RayfieldModal:Console({
 	Title = "Script Output",
 	Content = [[-- RayfieldModal Adult Edition
--- Premium Script Template
+-- Version 2.0
 
 local RayfieldModal = loadstring(game:HttpGet("URL"))()
 
@@ -77,6 +77,8 @@ local RayfieldModal = loadstring(game:HttpGet("URL"))()
 RayfieldModal:SetTheme("PinkPassion")
 -- Or: SetTheme("MidnightDesires")
 -- Or: SetTheme("DarkSeduction")
+-- Or: SetTheme("OceanFantasy")
+-- Or: SetTheme("PurpleHaze")
 
 -- Premium Features:
 -- ✓ Custom Image Backgrounds
@@ -87,18 +89,19 @@ RayfieldModal:SetTheme("PinkPassion")
 
 -- Example Usage:
 RayfieldModal:Notify({
-    Title = "Premium Notice",
-    Content = "Welcome to the premium experience!",
+    Title = "Hello!",
+    Content = "Welcome to Adult Edition",
     Duration = 5
 })
 
-print("Script loaded successfully!")]],
+-- Custom image theme:
+RayfieldModal:SetCustomImage("YOUR_IMAGE_URL")]],
 	Language = "lua",
-	Width = 520,
-	Height = 400
+	Width = 500,
+	Height = 380
 })
 
-task.wait(8)
+task.wait(7)
 
 -- ============================================
 -- DEMO 4: INPUT PROMPT
@@ -108,15 +111,15 @@ RayfieldModal:SetTheme("MidnightDesires")
 
 RayfieldModal:Prompt({
 	Title = "Enter Settings",
-	Content = "Enter your preferred value (1-100):",
-	Placeholder = "Enter number...",
-	Default = "69",
+	Content = "Please enter your preferred value:",
+	Placeholder = "Enter text...",
+	Default = "",
 	Callback = function(text)
 		if text and text ~= "" then
 			print("[4] User entered:", text)
 			RayfieldModal:Notify({
 				Title = "Settings Saved",
-				Content = "Your value has been set to: " .. text,
+				Content = "Value set to: " .. text,
 				Duration = 3
 			})
 		end
@@ -129,12 +132,12 @@ task.wait(7)
 -- DEMO 5: ALERT DIALOG
 -- ============================================
 print("[5] Testing Alert modal...")
-RayfieldModal:SetTheme("DarkSeduction")
+RayfieldModal:SetTheme("PinkPassion")
 
 RayfieldModal:Alert({
 	Title = "Important Notice",
-	Content = "This is the Adult Edition of RayfieldModal. All themes feature premium background images loaded from external sources.",
-	ButtonText = "I Understand",
+	Content = "This is the Adult Edition of RayfieldModal. All features are unlocked and ready to use!",
+	ButtonText = "Got it!",
 	Callback = function()
 		print("[5] Alert dismissed")
 	end
@@ -146,17 +149,17 @@ task.wait(5)
 -- DEMO 6: LOADING DIALOG
 -- ============================================
 print("[6] Testing Loading modal...")
-RayfieldModal:SetTheme("PinkPassion")
+RayfieldModal:SetTheme("MidnightDesires")
 
 local loading = RayfieldModal:Loading({
 	Title = "Processing",
-	Content = "Initializing premium features..."
+	Content = "Initializing..."
 })
 
 task.wait(1)
-loading:Update("Loading custom themes...")
+loading:Update("Loading assets...")
 task.wait(1)
-loading:Update("Applying background images...")
+loading:Update("Connecting to server...")
 task.wait(1)
 loading:Update("Almost ready...")
 task.wait(0.5)
