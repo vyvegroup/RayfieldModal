@@ -1,19 +1,9 @@
 --[[
 	
 	Rayfield Modal Library - ADULT VERSION
-	Extension for Rayfield Interface Suite
+	Matching Original Rayfield UI Style
 	
 	⚠️ 18+ VERSION - Adult Themes with External Image Assets
-	
-	Features:
-	- Modal Notifications with custom image themes
-	- Console/Code Display
-	- Yes/No Confirmation Dialogs
-	- Custom Prompts with Input
-	- NSFW Theme Support (Images from URL)
-	- Image Caching System
-	- Non-blocking UI
-	- Full Error Handling with pcall
 	
 ]]--
 
@@ -25,290 +15,233 @@ local RunService = game:GetService("RunService")
 local TextService = game:GetService("TextService")
 
 -- ============================================
--- SAFE FUNCTION WRAPPERS
+-- RAYFIELD STYLE THEME (From Original Rayfield)
 -- ============================================
-local SafeFunctions = {}
-
--- Safe writefile
-function SafeFunctions.writefile(filename, content)
-	local success, err = pcall(function()
-		if writefile then
-			writefile(filename, content)
-			return true
-		end
-		return false
-	end)
-	return success
-end
-
--- Safe readfile
-function SafeFunctions.readfile(filename)
-	local success, result = pcall(function()
-		if readfile then
-			return readfile(filename)
-		end
-		return nil
-	end)
-	if success then return result else return nil end
-end
-
--- Safe getcustomasset
-function SafeFunctions.getcustomasset(filename)
-	local success, result = pcall(function()
-		if getcustomasset then
-			return getcustomasset(filename)
-		end
-		return ""
-	end)
-	if success then return result else return "" end
-end
-
--- Safe HttpGet
-function SafeFunctions.httpGet(url)
-	local success, result = pcall(function()
-		return game:HttpGet(url)
-	end)
-	if success then 
-		return result 
-	else 
-		return nil, result 
-	end
-end
-
--- Safe gethui
-function SafeFunctions.gethui()
-	local success, result = pcall(function()
-		if gethui then
-			return gethui()
-		end
-		return nil
-	end)
-	if success then return result else return nil end
-end
-
--- Safe syn.protect_gui
-function SafeFunctions.protectGui(gui)
-	local success = pcall(function()
-		if syn and syn.protect_gui then
-			syn.protect_gui(gui)
-		end
-	end)
-	return success
-end
+local Theme = {
+	TextColor = Color3.fromRGB(240, 240, 240),
+	Background = Color3.fromRGB(25, 25, 25),
+	Topbar = Color3.fromRGB(34, 34, 34),
+	Shadow = Color3.fromRGB(20, 20, 20),
+	NotificationBackground = Color3.fromRGB(20, 20, 20),
+	ElementBackground = Color3.fromRGB(35, 35, 35),
+	ElementBackgroundHover = Color3.fromRGB(40, 40, 40),
+	ElementStroke = Color3.fromRGB(50, 50, 50),
+	Accent = Color3.fromRGB(0, 146, 214),
+	SliderBackground = Color3.fromRGB(50, 138, 220),
+	ToggleEnabled = Color3.fromRGB(0, 146, 214),
+	InputBackground = Color3.fromRGB(30, 30, 30),
+	InputStroke = Color3.fromRGB(65, 65, 65),
+}
 
 -- ============================================
--- IMAGE LOADER SYSTEM
+-- IMAGE LOADER - MULTIPLE METHODS
 -- ============================================
 local ImageCache = {}
+local LoadedImages = {}
 
-local function LoadImageFromURL(url, cacheName)
-	-- Check cache first
+-- Method 1: getcustomasset (best for most executors)
+local function loadImageMethod1(url, name)
+	local success, result = pcall(function()
+		local content = game:HttpGet(url)
+		if content and #content > 0 then
+			local filename = "RayfieldModal_" .. name .. ".jpg"
+			if writefile then
+				writefile(filename, content)
+			end
+			if getcustomasset then
+				return getcustomasset(filename)
+			end
+		end
+		return nil
+	end)
+	return success and result or nil
+end
+
+-- Method 2: Direct asset loading (some executors)
+local function loadImageMethod2(url, name)
+	local success, result = pcall(function()
+		local content = game:HttpGet(url)
+		if content and #content > 0 then
+			local filename = "RayfieldModal_" .. name .. ".png"
+			if writefile then
+				writefile(filename, content)
+			end
+			if getsynasset then
+				return getsynasset(filename)
+			end
+		end
+		return nil
+	end)
+	return success and result or nil
+end
+
+-- Method 3: Custom asset with folder
+local function loadImageMethod3(url, name)
+	local success, result = pcall(function()
+		local content = game:HttpGet(url)
+		if content and #content > 0 then
+			local folder = "RayfieldModal"
+			local filename = folder .. "/" .. name .. ".jpg"
+			
+			if isfolder and not isfolder(folder) then
+				if makefolder then makefolder(folder) end
+			end
+			
+			if writefile then
+				writefile(filename, content)
+			end
+			
+			if getcustomasset then
+				return getcustomasset(filename)
+			end
+		end
+		return nil
+	end)
+	return success and result or nil
+end
+
+-- Main Image Loader with all fallbacks
+local function LoadImageFromURL(url, name)
+	if not url or url == "" then return nil end
+	
+	-- Check cache
 	if ImageCache[url] then
 		return ImageCache[url]
 	end
 	
-	-- Generate filename
-	local fileName = "RayfieldModal_" .. (cacheName or "cache") .. ".jpg"
+	local asset = nil
 	
-	-- Try to load from URL
-	local content, err = SafeFunctions.httpGet(url)
-	
-	if content and #content > 0 then
-		-- Write to file
-		SafeFunctions.writefile(fileName, content)
-		
-		-- Get custom asset
-		local asset = SafeFunctions.getcustomasset(fileName)
-		
-		-- Cache the result
-		if asset and asset ~= "" then
-			ImageCache[url] = asset
-		end
-		
+	-- Try all methods
+	asset = loadImageMethod1(url, name)
+	if asset and asset ~= "" then
+		ImageCache[url] = asset
+		LoadedImages[name] = asset
 		return asset
 	end
 	
-	return ""
+	asset = loadImageMethod2(url, name)
+	if asset and asset ~= "" then
+		ImageCache[url] = asset
+		LoadedImages[name] = asset
+		return asset
+	end
+	
+	asset = loadImageMethod3(url, name)
+	if asset and asset ~= "" then
+		ImageCache[url] = asset
+		LoadedImages[name] = asset
+		return asset
+	end
+	
+	return nil
 end
 
 -- ============================================
--- ADULT THEMES CONFIGURATION
+-- ADULT THEMES
 -- ============================================
 local AdultThemes = {
-	-- Theme: Pink Passion
 	PinkPassion = {
 		Name = "Pink Passion",
 		ImageURL = "https://api-cdn.rule34.xxx/images/2198/20c7a55d5d03d0143ad13effebb9bb7e.jpeg",
-		TextColor = Color3.fromRGB(255, 255, 255),
-		TextStrokeColor = Color3.fromRGB(0, 0, 0),
-		TextStrokeTransparency = 0.3,
 		Accent = Color3.fromRGB(255, 105, 180),
-		AccentHover = Color3.fromRGB(255, 182, 193),
-		ButtonBackground = Color3.fromRGB(30, 30, 30),
-		ButtonBackgroundHover = Color3.fromRGB(50, 50, 50),
-		OverlayColor = Color3.fromRGB(0, 0, 0),
-		OverlayTransparency = 0.6,
-		GlowColor = Color3.fromRGB(255, 105, 180),
 	},
-	
-	-- Theme: Midnight Desires
 	MidnightDesires = {
 		Name = "Midnight Desires",
 		ImageURL = "https://rule34.porn/media/2024/06/Naked-Girl-by-Nat-the-LichOriginal.webp",
-		TextColor = Color3.fromRGB(255, 255, 255),
-		TextStrokeColor = Color3.fromRGB(0, 0, 0),
-		TextStrokeTransparency = 0.3,
 		Accent = Color3.fromRGB(147, 112, 219),
-		AccentHover = Color3.fromRGB(186, 85, 211),
-		ButtonBackground = Color3.fromRGB(25, 25, 35),
-		ButtonBackgroundHover = Color3.fromRGB(45, 45, 55),
-		OverlayColor = Color3.fromRGB(10, 10, 20),
-		OverlayTransparency = 0.5,
-		GlowColor = Color3.fromRGB(147, 112, 219),
 	},
-	
-	-- Theme: Dark Seduction
 	DarkSeduction = {
 		Name = "Dark Seduction",
 		ImageURL = "https://api-cdn.rule34.xxx/images/2198/20c7a55d5d03d0143ad13effebb9bb7e.jpeg",
-		TextColor = Color3.fromRGB(255, 215, 0),
-		TextStrokeColor = Color3.fromRGB(0, 0, 0),
-		TextStrokeTransparency = 0.4,
 		Accent = Color3.fromRGB(255, 69, 0),
-		AccentHover = Color3.fromRGB(255, 140, 0),
-		ButtonBackground = Color3.fromRGB(20, 10, 10),
-		ButtonBackgroundHover = Color3.fromRGB(40, 20, 20),
-		OverlayColor = Color3.fromRGB(10, 5, 5),
-		OverlayTransparency = 0.6,
-		GlowColor = Color3.fromRGB(255, 69, 0),
 	},
-	
-	-- Theme: Ocean Fantasy
 	OceanFantasy = {
 		Name = "Ocean Fantasy",
 		ImageURL = "https://rule34.porn/media/2024/06/Naked-Girl-by-Nat-the-LichOriginal.webp",
-		TextColor = Color3.fromRGB(173, 216, 230),
-		TextStrokeColor = Color3.fromRGB(0, 20, 40),
-		TextStrokeTransparency = 0.4,
 		Accent = Color3.fromRGB(0, 206, 209),
-		AccentHover = Color3.fromRGB(64, 224, 208),
-		ButtonBackground = Color3.fromRGB(10, 30, 40),
-		ButtonBackgroundHover = Color3.fromRGB(20, 50, 60),
-		OverlayColor = Color3.fromRGB(0, 20, 40),
-		OverlayTransparency = 0.5,
-		GlowColor = Color3.fromRGB(0, 206, 209),
 	},
-	
-	-- Theme: Purple Haze
 	PurpleHaze = {
 		Name = "Purple Haze",
 		ImageURL = "https://api-cdn.rule34.xxx/images/2198/20c7a55d5d03d0143ad13effebb9bb7e.jpeg",
-		TextColor = Color3.fromRGB(255, 255, 255),
-		TextStrokeColor = Color3.fromRGB(75, 0, 130),
-		TextStrokeTransparency = 0.3,
 		Accent = Color3.fromRGB(186, 85, 211),
-		AccentHover = Color3.fromRGB(218, 112, 214),
-		ButtonBackground = Color3.fromRGB(30, 10, 40),
-		ButtonBackgroundHover = Color3.fromRGB(50, 20, 60),
-		OverlayColor = Color3.fromRGB(20, 0, 30),
-		OverlayTransparency = 0.55,
-		GlowColor = Color3.fromRGB(186, 85, 211),
 	},
-	
-	-- Theme: Custom (User Provided URL)
 	Custom = {
 		Name = "Custom",
 		ImageURL = "",
-		TextColor = Color3.fromRGB(255, 255, 255),
-		TextStrokeColor = Color3.fromRGB(0, 0, 0),
-		TextStrokeTransparency = 0.3,
 		Accent = Color3.fromRGB(0, 146, 214),
-		AccentHover = Color3.fromRGB(0, 170, 255),
-		ButtonBackground = Color3.fromRGB(30, 30, 30),
-		ButtonBackgroundHover = Color3.fromRGB(50, 50, 50),
-		OverlayColor = Color3.fromRGB(0, 0, 0),
-		OverlayTransparency = 0.6,
-		GlowColor = Color3.fromRGB(0, 146, 214),
 	},
 }
 
 -- ============================================
--- RAYFIELD MODAL ADULT LIBRARY
+-- MAIN LIBRARY
 -- ============================================
 local RayfieldModalAdult = {
 	Themes = AdultThemes,
-	CurrentTheme = nil,
-	CurrentImageAsset = "",
+	CurrentTheme = AdultThemes.PinkPassion,
+	CurrentImageAsset = nil,
 	ModalCount = 0,
-	ImageLoaded = false,
 }
-
--- Set default theme
-RayfieldModalAdult.CurrentTheme = AdultThemes.PinkPassion
 
 -- ============================================
 -- UTILITY FUNCTIONS
 -- ============================================
 local function Create(instance, properties)
-	local success, obj = pcall(function()
-		local o = Instance.new(instance)
-		for prop, value in pairs(properties) do
-			pcall(function()
-				o[prop] = value
-			end)
-		end
-		return o
-	end)
-	return success and obj or nil
+	local obj = Instance.new(instance)
+	for prop, value in pairs(properties) do
+		pcall(function() obj[prop] = value end)
+	end
+	return obj
 end
 
 local function Tween(obj, props, duration, style, direction)
-	if not obj then return nil end
-	
-	local success, tween = pcall(function()
+	pcall(function()
 		local tweenInfo = TweenInfo.new(duration or 0.3, style or Enum.EasingStyle.Quint, direction or Enum.EasingDirection.Out)
-		local t = TweenService:Create(obj, tweenInfo, props)
-		t:Play()
-		return t
+		local tween = TweenService:Create(obj, tweenInfo, props)
+		tween:Play()
 	end)
-	return success and tween or nil
 end
 
 local function GetScreenGui()
 	local screenGui
 	
 	-- Try gethui first
-	local hui = SafeFunctions.gethui()
-	if hui then
-		screenGui = hui:FindFirstChild("RayfieldModalAdultUI")
-		if not screenGui then
-			screenGui = Create("ScreenGui", {
-				Name = "RayfieldModalAdultUI",
-				IgnoreGuiInset = true,
-				ResetOnSpawn = false,
-				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-				DisplayOrder = 1000
-			})
-			if screenGui then
-				screenGui.Parent = hui
+	pcall(function()
+		if gethui then
+			screenGui = gethui():FindFirstChild("RayfieldModalAdultUI")
+			if not screenGui then
+				screenGui = Create("ScreenGui", {
+					Name = "RayfieldModalAdultUI",
+					IgnoreGuiInset = true,
+					ResetOnSpawn = false,
+					ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+					DisplayOrder = 1000
+				})
+				screenGui.Parent = gethui()
 			end
 		end
-	else
-		-- Try syn.protect_gui
-		screenGui = CoreGui:FindFirstChild("RayfieldModalAdultUI")
-		if not screenGui then
-			screenGui = Create("ScreenGui", {
-				Name = "RayfieldModalAdultUI",
-				IgnoreGuiInset = true,
-				ResetOnSpawn = false,
-				ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-				DisplayOrder = 1000
-			})
-			if screenGui then
-				SafeFunctions.protectGui(screenGui)
+	end)
+	
+	-- Fallback to CoreGui
+	if not screenGui then
+		pcall(function()
+			screenGui = CoreGui:FindFirstChild("RayfieldModalAdultUI")
+			if not screenGui then
+				screenGui = Create("ScreenGui", {
+					Name = "RayfieldModalAdultUI",
+					IgnoreGuiInset = true,
+					ResetOnSpawn = false,
+					ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+					DisplayOrder = 1000
+				})
+				-- Try syn.protect_gui
+				pcall(function()
+					if syn and syn.protect_gui then
+						syn.protect_gui(screenGui)
+					end
+				end)
 				screenGui.Parent = CoreGui
 			end
-		end
+		end)
 	end
 	
 	return screenGui
@@ -317,34 +250,32 @@ end
 -- ============================================
 -- THEME MANAGEMENT
 -- ============================================
-function RayfieldModalAdult:SetTheme(themeName, customImageURL)
-	local success, err = pcall(function()
+function RayfieldModalAdult:SetTheme(themeName, customURL)
+	pcall(function()
 		if self.Themes[themeName] then
 			self.CurrentTheme = self.Themes[themeName]
 			
-			-- Handle custom theme
-			if themeName == "Custom" and customImageURL then
-				self.CurrentTheme.ImageURL = customImageURL
+			if themeName == "Custom" and customURL then
+				self.CurrentTheme.ImageURL = customURL
 			end
 			
-			-- Load the theme image
+			-- Update accent color
+			if self.CurrentTheme.Accent then
+				Theme.Accent = self.CurrentTheme.Accent
+			end
+			
+			-- Load image
 			if self.CurrentTheme.ImageURL and self.CurrentTheme.ImageURL ~= "" then
 				self.CurrentImageAsset = LoadImageFromURL(self.CurrentTheme.ImageURL, themeName)
-				self.ImageLoaded = self.CurrentImageAsset ~= ""
 			else
-				self.ImageLoaded = false
-				self.CurrentImageAsset = ""
+				self.CurrentImageAsset = nil
 			end
 		end
 	end)
-	
-	if not success then
-		warn("RayfieldModal: Error setting theme: " .. tostring(err))
-	end
 end
 
-function RayfieldModalAdult:SetCustomImage(imageURL)
-	self:SetTheme("Custom", imageURL)
+function RayfieldModalAdult:SetCustomImage(url)
+	self:SetTheme("Custom", url)
 end
 
 function RayfieldModalAdult:PreloadThemes()
@@ -360,17 +291,13 @@ function RayfieldModalAdult:PreloadThemes()
 end
 
 -- ============================================
--- CREATE OVERLAY WITH BACKGROUND IMAGE
+-- CREATE OVERLAY - RAYFIELD STYLE
 -- ============================================
-local function CreateOverlay(parent, theme, imageAsset)
-	if not parent then return nil end
-	
-	-- Main overlay container (non-blocking)
+local function CreateOverlay(parent)
 	local overlay = Create("Frame", {
 		Name = "Overlay",
 		Size = UDim2.new(1, 0, 1, 0),
-		Position = UDim2.new(0, 0, 0, 0),
-		BackgroundColor3 = theme.OverlayColor,
+		BackgroundColor3 = Color3.new(0, 0, 0),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		ZIndex = 1,
@@ -378,383 +305,279 @@ local function CreateOverlay(parent, theme, imageAsset)
 		Parent = parent
 	})
 	
-	if not overlay then return nil end
-	
-	-- Background image (if available)
-	if imageAsset and imageAsset ~= "" then
-		local bgImage = Create("ImageLabel", {
-			Name = "BackgroundImage",
-			Size = UDim2.new(1, 0, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
-			BackgroundTransparency = 1,
-			Image = imageAsset,
-			ScaleType = Enum.ScaleType.Crop,
-			ImageTransparency = 1,
-			ZIndex = 2,
-			Active = false,
-			Parent = overlay
-		})
-		
-		if bgImage then
-			Create("UICorner", {CornerRadius = UDim.new(0, 0), Parent = bgImage})
-		end
-		
-		-- Dark overlay on top of image
-		local darkOverlay = Create("Frame", {
-			Name = "DarkOverlay",
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundColor3 = theme.OverlayColor,
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ZIndex = 3,
-			Active = false,
-			Parent = overlay
-		})
-		
-		-- Animate background
-		Tween(bgImage, {ImageTransparency = 0.2}, 0.5)
-		Tween(darkOverlay, {BackgroundTransparency = theme.OverlayTransparency}, 0.5)
-	else
-		Tween(overlay, {BackgroundTransparency = theme.OverlayTransparency}, 0.3)
-	end
+	Tween(overlay, {BackgroundTransparency = 0.5}, 0.3)
 	
 	return overlay
 end
 
 -- ============================================
--- CREATE MODAL BASE WITH IMAGE BACKGROUND
+-- CREATE MODAL BASE - RAYFIELD STYLE
 -- ============================================
-local function CreateModalBase(parent, title, width, height, theme, imageAsset)
-	if not parent then return nil end
-	
-	-- Main modal container
+local function CreateModalBase(parent, title, width, height, imageAsset)
 	local modal = Create("Frame", {
-		Name = "Modal_" .. tostring(RayfieldModalAdult.ModalCount),
-		Size = UDim2.new(0, width or 400, 0, height or 200),
+		Name = "Modal",
+		Size = UDim2.new(0, width, 0, 0),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-		BorderColor3 = Color3.fromRGB(50, 50, 50),
+		BackgroundColor3 = Theme.Background,
 		BorderSizePixel = 0,
 		ZIndex = 10,
-		Active = true,
 		Parent = parent
 	})
 	
-	if not modal then return nil end
-	
-	-- Corner radius
-	Create("UICorner", {CornerRadius = UDim.new(0, 20), Parent = modal})
-	
-	-- Background image (if available)
-	if imageAsset and imageAsset ~= "" then
-		local bgImage = Create("ImageLabel", {
-			Name = "ModalBackground",
-			Size = UDim2.new(1, 0, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
-			BackgroundTransparency = 1,
-			Image = imageAsset,
-			ScaleType = Enum.ScaleType.Crop,
-			ImageTransparency = 0.3,
-			ZIndex = 11,
-			Parent = modal
-		})
-		
-		if bgImage then
-			Create("UICorner", {CornerRadius = UDim.new(0, 20), Parent = bgImage})
-		end
-	end
-	
-	-- Dark overlay for readability
-	local darkOverlay = Create("Frame", {
-		Name = "DarkOverlay",
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-		BackgroundTransparency = 0.15,
-		BorderSizePixel = 0,
-		ZIndex = 12,
+	-- Corner radius (Rayfield style)
+	Create("UICorner", {
+		CornerRadius = UDim.new(0, 8),
 		Parent = modal
 	})
 	
-	if darkOverlay then
-		Create("UICorner", {CornerRadius = UDim.new(0, 20), Parent = darkOverlay})
-	end
+	-- Stroke (Rayfield style)
+	Create("UIStroke", {
+		Color = Theme.ElementStroke,
+		Thickness = 1,
+		Parent = modal
+	})
 	
-	-- Glow effect
-	local glow = Create("ImageLabel", {
-		Name = "Glow",
-		Size = UDim2.new(1.1, 0, 1.1, 0),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		AnchorPoint = Vector2.new(0.5, 0.5),
+	-- Shadow (Rayfield style)
+	local shadow = Create("ImageLabel", {
+		Name = "Shadow",
+		Size = UDim2.new(1, 30, 1, 30),
+		Position = UDim2.new(0, -15, 0, -15),
 		BackgroundTransparency = 1,
 		Image = "rbxassetid://6014261993",
-		ImageColor3 = theme.GlowColor,
-		ImageTransparency = 1,
+		ImageColor3 = Theme.Shadow,
+		ImageTransparency = 0.82,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(49, 49, 450, 450),
 		ZIndex = 9,
 		Parent = modal
 	})
 	
-	-- Border stroke
-	local stroke = Create("UIStroke", {
-		Color = theme.Accent,
-		Thickness = 2,
-		Transparency = 1,
-		Parent = modal
-	})
+	-- Background Image (if available)
+	local bgImage = nil
+	if imageAsset and imageAsset ~= "" then
+		bgImage = Create("ImageLabel", {
+			Name = "BackgroundImage",
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = 1,
+			Image = imageAsset,
+			ScaleType = Enum.ScaleType.Crop,
+			ImageTransparency = 0.4,
+			ZIndex = 11,
+			Parent = modal
+		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = bgImage})
+		
+		-- Dark overlay for text readability
+		local darkOverlay = Create("Frame", {
+			Name = "DarkOverlay",
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
+			ZIndex = 12,
+			Parent = modal
+		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = darkOverlay})
+	end
 	
-	-- Top bar
+	-- Topbar (Rayfield style)
 	local topbar = Create("Frame", {
 		Name = "Topbar",
-		Size = UDim2.new(1, 0, 0, 50),
-		Position = UDim2.new(0, 0, 0, 0),
-		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-		BackgroundTransparency = 0.5,
+		Size = UDim2.new(1, 0, 0, 45),
+		BackgroundColor3 = Theme.Topbar,
 		BorderSizePixel = 0,
 		ZIndex = 15,
 		Parent = modal
 	})
 	
-	if topbar then
-		Create("UICorner", {CornerRadius = UDim.new(0, 20), Parent = topbar})
-		
-		-- Top bar corner fix
-		Create("Frame", {
-			Name = "CornerFix",
-			Size = UDim2.new(1, 0, 0, 20),
-			Position = UDim2.new(0, 0, 1, -8),
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 0,
-			ZIndex = 14,
-			Parent = topbar
-		})
-	end
+	Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = topbar})
 	
-	-- Title
+	-- Fix bottom corners of topbar
+	Create("Frame", {
+		Name = "CornerFix",
+		Size = UDim2.new(1, 0, 0, 15),
+		Position = UDim2.new(0, 0, 1, -5),
+		BackgroundColor3 = Theme.Topbar,
+		BorderSizePixel = 0,
+		ZIndex = 14,
+		Parent = topbar
+	})
+	
+	-- Title (Rayfield style)
 	local titleLabel = Create("TextLabel", {
 		Name = "Title",
-		Size = UDim2.new(1, -60, 1, 0),
-		Position = UDim2.new(0, 20, 0, 0),
+		Size = UDim2.new(1, -50, 1, 0),
+		Position = UDim2.new(0, 15, 0, 0),
 		BackgroundTransparency = 1,
 		Text = title or "Modal",
-		TextColor3 = theme.TextColor,
-		TextSize = 18,
-		Font = Enum.Font.GothamBold,
+		TextColor3 = Theme.TextColor,
+		TextSize = 16,
+		Font = Enum.Font.GothamSemibold,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 16,
 		Parent = topbar
 	})
 	
-	if titleLabel and theme.TextStrokeTransparency then
-		Create("UIStroke", {
-			Color = theme.TextStrokeColor,
-			Thickness = 2,
-			Transparency = theme.TextStrokeTransparency,
-			Parent = titleLabel
-		})
-	end
-	
-	-- Close button
+	-- Close button (Rayfield style)
 	local closeBtn = Create("TextButton", {
 		Name = "Close",
-		Size = UDim2.new(0, 35, 0, 35),
-		Position = UDim2.new(1, -42, 0.5, 0),
+		Size = UDim2.new(0, 30, 0, 30),
+		Position = UDim2.new(1, -38, 0.5, 0),
 		AnchorPoint = Vector2.new(0, 0.5),
-		BackgroundColor3 = Color3.fromRGB(255, 70, 70),
-		BackgroundTransparency = 0.3,
+		BackgroundTransparency = 1,
 		Text = "",
 		ZIndex = 16,
 		Parent = topbar
 	})
 	
-	if closeBtn then
-		Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = closeBtn})
-		
-		Create("ImageLabel", {
-			Name = "Icon",
-			Size = UDim2.new(0, 18, 0, 18),
-			Position = UDim2.new(0.5, 0, 0.5, 0),
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://3926305904",
-			ImageRectSize = Vector2.new(48, 48),
-			ImageRectOffset = Vector2.new(288, 288),
-			ImageColor3 = Color3.new(1, 1, 1),
-			ZIndex = 17,
-			Parent = closeBtn
-		})
-	end
+	local closeIcon = Create("ImageLabel", {
+		Name = "Icon",
+		Size = UDim2.new(0, 16, 0, 16),
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://3926305904",
+		ImageRectSize = Vector2.new(48, 48),
+		ImageRectOffset = Vector2.new(288, 288),
+		ImageColor3 = Theme.TextColor,
+		ImageTransparency = 0.3,
+		ZIndex = 17,
+		Parent = closeBtn
+	})
 	
-	-- Initial animation state
-	if modal then
-		modal.Size = UDim2.new(0, width or 400, 0, 0)
-		modal.BackgroundTransparency = 1
-	end
-	if topbar then topbar.BackgroundTransparency = 1 end
-	if titleLabel then titleLabel.TextTransparency = 1 end
-	if closeBtn then closeBtn.Visible = false end
-	if glow then glow.ImageTransparency = 1 end
-	if stroke then stroke.Transparency = 1 end
+	-- Initial state
+	shadow.ImageTransparency = 1
+	titleLabel.TextTransparency = 1
+	closeBtn.Visible = false
+	modal.BackgroundTransparency = 1
+	topbar.BackgroundTransparency = 1
+	if bgImage then bgImage.ImageTransparency = 1 end
 	
 	task.wait()
 	
-	-- Animate in
+	-- Animate in (Rayfield style)
 	Tween(modal, {BackgroundTransparency = 0}, 0.2)
-	Tween(topbar, {BackgroundTransparency = 0.5}, 0.2)
+	Tween(topbar, {BackgroundTransparency = 0}, 0.2)
 	Tween(titleLabel, {TextTransparency = 0}, 0.2)
-	Tween(glow, {ImageTransparency = 0.5}, 0.4)
-	Tween(stroke, {Transparency = 0}, 0.3)
-	Tween(modal, {Size = UDim2.new(0, width or 400, 0, height or 200)}, 0.4, Enum.EasingStyle.Back)
+	Tween(shadow, {ImageTransparency = 0.82}, 0.3)
+	Tween(modal, {Size = UDim2.new(0, width, 0, height)}, 0.3, Enum.EasingStyle.Back)
+	if bgImage then Tween(bgImage, {ImageTransparency = 0.4}, 0.3) end
 	
 	task.wait(0.15)
-	if closeBtn then closeBtn.Visible = true end
+	closeBtn.Visible = true
 	
-	return modal, topbar, titleLabel, closeBtn, glow, stroke
+	return modal, topbar, titleLabel, closeBtn, shadow, bgImage
 end
 
 -- ============================================
--- NOTIFY - MODAL NOTIFICATION
+-- NOTIFY - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Notify(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
+		local width = 380
+		local height = 140
 		
-		local width = 420
-		local height = 180
-		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return end
-		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Notification", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return
-		end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Notification", width, height, self.CurrentImageAsset)
 		
 		-- Content container
-		local contentFrame = Create("Frame", {
+		local content = Create("Frame", {
 			Name = "Content",
-			Size = UDim2.new(1, -40, 1, -70),
-			Position = UDim2.new(0, 20, 0, 55),
+			Size = UDim2.new(1, -30, 1, -60),
+			Position = UDim2.new(0, 15, 0, 50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
 		})
 		
-		-- Optional icon
+		-- Icon (Rayfield style)
 		local iconSize = 0
 		if data.Image then
 			local icon = Create("ImageLabel", {
 				Name = "Icon",
-				Size = UDim2.new(0, 50, 0, 50),
+				Size = UDim2.new(0, 40, 0, 40),
 				Position = UDim2.new(0, 0, 0, 10),
 				BackgroundTransparency = 1,
-				Image = typeof(data.Image) == "number" and "rbxassetid://" .. data.Image or data.Image,
-				ImageColor3 = theme.Accent,
+				Image = type(data.Image) == "number" and "rbxassetid://" .. data.Image or data.Image,
+				ImageColor3 = Theme.Accent,
 				ZIndex = 16,
-				Parent = contentFrame
+				Parent = content
 			})
-			if icon then iconSize = 60 end
+			iconSize = 50
 		end
 		
-		-- Description
+		-- Description (Rayfield style)
 		local descLabel = Create("TextLabel", {
 			Name = "Description",
 			Size = UDim2.new(1, -iconSize - 10, 1, -20),
 			Position = UDim2.new(0, iconSize, 0, 10),
 			BackgroundTransparency = 1,
 			Text = data.Content or "",
-			TextColor3 = theme.TextColor,
-			TextSize = 15,
-			Font = Enum.Font.GothamMedium,
+			TextColor3 = Theme.TextColor,
+			TextSize = 14,
+			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
-		
-		if descLabel then
-			descLabel.TextTransparency = 1
-			Create("UIStroke", {
-				Color = theme.TextStrokeColor,
-				Thickness = 1.5,
-				Transparency = theme.TextStrokeTransparency,
-				Parent = descLabel
-			})
-			Tween(descLabel, {TextTransparency = 0}, 0.2)
-		end
+		descLabel.TextTransparency = 1
+		Tween(descLabel, {TextTransparency = 0}, 0.2)
 		
 		-- Close function
 		local function closeModal()
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if topbar then Tween(topbar, {BackgroundTransparency = 1}, 0.2) end
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if descLabel then Tween(descLabel, {TextTransparency = 1}, 0.15) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(topbar, {BackgroundTransparency = 1}, 0.2)
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(descLabel, {TextTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
-			if modal then modal:Destroy() end
-			if overlay then overlay:Destroy() end
+			task.wait(0.25)
+			modal:Destroy()
+			overlay:Destroy()
 		end
 		
-		if closeBtn then
-			closeBtn.MouseButton1Click:Connect(closeModal)
-		end
+		closeBtn.MouseButton1Click:Connect(closeModal)
 		
 		-- Auto close
 		task.spawn(function()
-			local duration = data.Duration or 5
-			task.wait(duration)
+			task.wait(data.Duration or 4)
 			if modal and modal.Parent then
 				closeModal()
 			end
 		end)
-		
-		return modal
 	end)
-	
-	if not success then
-		warn("RayfieldModal Notify Error: " .. tostring(err))
-	end
 end
 
 -- ============================================
--- CONFIRM - YES/NO DIALOG
+-- CONFIRM - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Confirm(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
+		local width = 380
+		local height = 160
 		
-		local width = 420
-		local height = 200
-		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return end
-		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Confirm", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return
-		end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Confirm", width, height, self.CurrentImageAsset)
 		
 		-- Content
-		local contentFrame = Create("Frame", {
+		local content = Create("Frame", {
 			Name = "Content",
-			Size = UDim2.new(1, -40, 1, -120),
-			Position = UDim2.new(0, 20, 0, 55),
+			Size = UDim2.new(1, -30, 1, -105),
+			Position = UDim2.new(0, 15, 0, 50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
@@ -764,174 +587,126 @@ function RayfieldModalAdult:Confirm(data)
 		local descLabel = Create("TextLabel", {
 			Name = "Description",
 			Size = UDim2.new(1, 0, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Text = data.Content or "Are you sure?",
-			TextColor3 = theme.TextColor,
-			TextSize = 15,
-			Font = Enum.Font.GothamMedium,
+			TextColor3 = Theme.TextColor,
+			TextSize = 14,
+			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
-		
-		if descLabel then
-			descLabel.TextTransparency = 1
-			Create("UIStroke", {
-				Color = theme.TextStrokeColor,
-				Thickness = 1.5,
-				Transparency = theme.TextStrokeTransparency,
-				Parent = descLabel
-			})
-			Tween(descLabel, {TextTransparency = 0}, 0.2)
-		end
+		descLabel.TextTransparency = 1
+		Tween(descLabel, {TextTransparency = 0}, 0.2)
 		
 		-- Buttons container
 		local btnContainer = Create("Frame", {
 			Name = "Buttons",
-			Size = UDim2.new(1, -40, 0, 45),
-			Position = UDim2.new(0, 20, 1, -60),
+			Size = UDim2.new(1, -30, 0, 36),
+			Position = UDim2.new(0, 15, 1, -50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
 		})
 		
-		-- No button
+		-- No button (Rayfield style)
 		local noBtn = Create("TextButton", {
 			Name = "No",
-			Size = UDim2.new(0.5, -8, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
-			BackgroundColor3 = theme.ButtonBackground,
-			BackgroundTransparency = 0.3,
+			Size = UDim2.new(0.5, -5, 1, 0),
+			BackgroundColor3 = Theme.ElementBackground,
 			BorderSizePixel = 0,
 			Text = data.NoText or "No",
-			TextColor3 = theme.TextColor,
-			TextSize = 14,
-			Font = Enum.Font.GothamBold,
+			TextColor3 = Theme.TextColor,
+			TextSize = 13,
+			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = btnContainer
 		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = noBtn})
+		Create("UIStroke", {Color = Theme.ElementStroke, Thickness = 1, Parent = noBtn})
 		
-		if noBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = noBtn})
-			Create("UIStroke", {Color = Color3.fromRGB(100, 100, 100), Thickness = 1, Transparency = 0.5, Parent = noBtn})
-		end
-		
-		-- Yes button
+		-- Yes button (Rayfield style)
 		local yesBtn = Create("TextButton", {
 			Name = "Yes",
-			Size = UDim2.new(0.5, -8, 1, 0),
-			Position = UDim2.new(0.5, 8, 0, 0),
-			BackgroundColor3 = theme.Accent,
-			BackgroundTransparency = 0.2,
+			Size = UDim2.new(0.5, -5, 1, 0),
+			Position = UDim2.new(0.5, 5, 0, 0),
+			BackgroundColor3 = Theme.Accent,
 			BorderSizePixel = 0,
 			Text = data.YesText or "Yes",
 			TextColor3 = Color3.new(1, 1, 1),
-			TextSize = 14,
-			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = btnContainer
 		})
-		
-		if yesBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = yesBtn})
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = yesBtn})
 		
 		-- Hover effects
-		if noBtn then
-			noBtn.MouseEnter:Connect(function() Tween(noBtn, {BackgroundTransparency = 0.1}, 0.15) end)
-			noBtn.MouseLeave:Connect(function() Tween(noBtn, {BackgroundTransparency = 0.3}, 0.15) end)
-		end
-		if yesBtn then
-			yesBtn.MouseEnter:Connect(function() Tween(yesBtn, {BackgroundColor3 = theme.AccentHover}, 0.15) end)
-			yesBtn.MouseLeave:Connect(function() Tween(yesBtn, {BackgroundColor3 = theme.Accent}, 0.15) end)
-		end
+		noBtn.MouseEnter:Connect(function() Tween(noBtn, {BackgroundColor3 = Theme.ElementBackgroundHover}, 0.15) end)
+		noBtn.MouseLeave:Connect(function() Tween(noBtn, {BackgroundColor3 = Theme.ElementBackground}, 0.15) end)
 		
 		-- Close function
 		local function closeModal()
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if descLabel then Tween(descLabel, {TextTransparency = 1}, 0.15) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(topbar, {BackgroundTransparency = 1}, 0.2)
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(descLabel, {TextTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
-			if modal then modal:Destroy() end
-			if overlay then overlay:Destroy() end
+			task.wait(0.25)
+			modal:Destroy()
+			overlay:Destroy()
 		end
 		
-		-- Button callbacks
-		if noBtn then
-			noBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, false) end
-			end)
-		end
+		noBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, false) end
+		end)
 		
-		if yesBtn then
-			yesBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, true) end
-			end)
-		end
+		yesBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, true) end
+		end)
 		
-		if closeBtn then
-			closeBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, false) end
-			end)
-		end
-		
-		return modal
+		closeBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, false) end
+		end)
 	end)
-	
-	if not success then
-		warn("RayfieldModal Confirm Error: " .. tostring(err))
-	end
 end
 
 -- ============================================
--- CONSOLE - CODE DISPLAY
+-- CONSOLE - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Console(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
-		
 		local width = data.Width or 550
 		local height = data.Height or 400
 		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Console", width, height, self.CurrentImageAsset)
 		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Console", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return
-		end
-		
-		-- Console container
+		-- Console container (Rayfield style)
 		local consoleFrame = Create("Frame", {
 			Name = "ConsoleFrame",
-			Size = UDim2.new(1, -30, 1, -70),
-			Position = UDim2.new(0, 15, 0, 55),
-			BackgroundColor3 = Color3.fromRGB(10, 10, 10),
-			BackgroundTransparency = 0.3,
+			Size = UDim2.new(1, -20, 1, -60),
+			Position = UDim2.new(0, 10, 0, 50),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 18),
 			BorderSizePixel = 0,
 			ZIndex = 15,
 			Parent = modal
 		})
-		
-		if consoleFrame then
-			Create("UICorner", {CornerRadius = UDim.new(0, 12), Parent = consoleFrame})
-			Create("UIStroke", {Color = theme.Accent, Thickness = 1, Transparency = 0.5, Parent = consoleFrame})
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = consoleFrame})
+		Create("UIStroke", {Color = Theme.ElementStroke, Thickness = 1, Parent = consoleFrame})
 		
 		-- Scrolling frame
 		local scrollingFrame = Create("ScrollingFrame", {
@@ -940,7 +715,7 @@ function RayfieldModalAdult:Console(data)
 			Position = UDim2.new(0, 5, 0, 5),
 			BackgroundTransparency = 1,
 			ScrollBarThickness = 6,
-			ScrollBarImageColor3 = theme.Accent,
+			ScrollBarImageColor3 = Theme.Accent,
 			BorderSizePixel = 0,
 			CanvasSize = UDim2.new(0, 0, 0, 0),
 			ZIndex = 16,
@@ -951,7 +726,7 @@ function RayfieldModalAdult:Console(data)
 		local codeText = Create("TextLabel", {
 			Name = "Code",
 			Size = UDim2.new(1, -10, 1, 0),
-			Position = UDim2.new(0, 8, 0, 8),
+			Position = UDim2.new(0, 5, 0, 5),
 			BackgroundTransparency = 1,
 			Text = data.Content or "",
 			TextColor3 = Color3.fromRGB(230, 230, 230),
@@ -963,67 +738,56 @@ function RayfieldModalAdult:Console(data)
 			ZIndex = 17,
 			Parent = scrollingFrame
 		})
-		
-		if codeText then
-			codeText.TextTransparency = 1
-		end
+		codeText.TextTransparency = 1
 		
 		-- Language badge
 		if data.Language then
 			local langBadge = Create("Frame", {
 				Name = "LangBadge",
-				Size = UDim2.new(0, 70, 0, 25),
-				Position = UDim2.new(1, -85, 0, 8),
-				BackgroundColor3 = theme.Accent,
-				BackgroundTransparency = 0.2,
+				Size = UDim2.new(0, 60, 0, 22),
+				Position = UDim2.new(1, -70, 0, 8),
+				BackgroundColor3 = Theme.Accent,
 				BorderSizePixel = 0,
 				ZIndex = 18,
 				Parent = modal
 			})
-			
-			if langBadge then
-				Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = langBadge})
-				Create("TextLabel", {
-					Name = "Lang",
-					Size = UDim2.new(1, 0, 1, 0),
-					BackgroundTransparency = 1,
-					Text = string.upper(data.Language),
-					TextColor3 = Color3.new(1, 1, 1),
-					TextSize = 11,
-					Font = Enum.Font.GothamBold,
-					ZIndex = 19,
-					Parent = langBadge
-				})
-			end
+			Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = langBadge})
+			Create("TextLabel", {
+				Name = "Lang",
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				Text = string.upper(data.Language),
+				TextColor3 = Color3.new(1, 1, 1),
+				TextSize = 10,
+				Font = Enum.Font.GothamBold,
+				ZIndex = 19,
+				Parent = langBadge
+			})
 		end
 		
-		-- Copy button
+		-- Copy button (Rayfield style)
 		local copyBtn = Create("TextButton", {
 			Name = "Copy",
-			Size = UDim2.new(0, 90, 0, 32),
-			Position = UDim2.new(0, 15, 1, -42),
-			BackgroundColor3 = theme.ButtonBackground,
-			BackgroundTransparency = 0.3,
+			Size = UDim2.new(0, 80, 0, 28),
+			Position = UDim2.new(0, 10, 1, -38),
+			BackgroundColor3 = Theme.ElementBackground,
 			BorderSizePixel = 0,
 			Text = "Copy",
-			TextColor3 = theme.TextColor,
+			TextColor3 = Theme.TextColor,
 			TextSize = 12,
 			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = modal
 		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = copyBtn})
+		Create("UIStroke", {Color = Theme.ElementStroke, Thickness = 1, Parent = copyBtn})
 		
-		if copyBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = copyBtn})
-		end
-		
-		-- Close button
+		-- Close button (Rayfield style)
 		local closeBtnBottom = Create("TextButton", {
 			Name = "CloseBtn",
-			Size = UDim2.new(0, 90, 0, 32),
-			Position = UDim2.new(1, -105, 1, -42),
-			BackgroundColor3 = theme.Accent,
-			BackgroundTransparency = 0.2,
+			Size = UDim2.new(0, 80, 0, 28),
+			Position = UDim2.new(1, -90, 1, -38),
+			BackgroundColor3 = Theme.Accent,
 			BorderSizePixel = 0,
 			Text = "Close",
 			TextColor3 = Color3.new(1, 1, 1),
@@ -1032,292 +796,220 @@ function RayfieldModalAdult:Console(data)
 			ZIndex = 16,
 			Parent = modal
 		})
-		
-		if closeBtnBottom then
-			Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = closeBtnBottom})
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 4), Parent = closeBtnBottom})
 		
 		Tween(codeText, {TextTransparency = 0}, 0.2)
 		
 		-- Copy function
-		if copyBtn then
-			copyBtn.MouseButton1Click:Connect(function()
-				if setclipboard then
-					pcall(function()
-						setclipboard(data.Content or "")
-						copyBtn.Text = "Copied!"
-						copyBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-						task.wait(1)
-						copyBtn.Text = "Copy"
-						copyBtn.BackgroundColor3 = theme.ButtonBackground
-					end)
-				end
-			end)
-		end
+		copyBtn.MouseButton1Click:Connect(function()
+			if setclipboard then
+				pcall(function()
+					setclipboard(data.Content or "")
+					copyBtn.Text = "Copied!"
+					copyBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+					task.wait(1)
+					copyBtn.Text = "Copy"
+					copyBtn.BackgroundColor3 = Theme.ElementBackground
+				end)
+			end
+		end)
 		
 		-- Close function
 		local function closeModal()
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if codeText then Tween(codeText, {TextTransparency = 1}, 0.15) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(codeText, {TextTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
-			if modal then modal:Destroy() end
-			if overlay then overlay:Destroy() end
+			task.wait(0.25)
+			modal:Destroy()
+			overlay:Destroy()
 		end
 		
-		if closeBtnBottom then
-			closeBtnBottom.MouseButton1Click:Connect(closeModal)
-		end
-		if closeBtn then
-			closeBtn.MouseButton1Click:Connect(closeModal)
-		end
-		
-		return modal
+		closeBtnBottom.MouseButton1Click:Connect(closeModal)
+		closeBtn.MouseButton1Click:Connect(closeModal)
 	end)
-	
-	if not success then
-		warn("RayfieldModal Console Error: " .. tostring(err))
-	end
 end
 
 -- ============================================
--- PROMPT - INPUT DIALOG
+-- PROMPT - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Prompt(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
+		local width = 380
+		local height = 175
 		
-		local width = 420
-		local height = 220
-		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return end
-		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Input", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return
-		end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Input", width, height, self.CurrentImageAsset)
 		
 		-- Content
-		local contentFrame = Create("Frame", {
+		local content = Create("Frame", {
 			Name = "Content",
-			Size = UDim2.new(1, -40, 1, -120),
-			Position = UDim2.new(0, 20, 0, 55),
+			Size = UDim2.new(1, -30, 1, -105),
+			Position = UDim2.new(0, 15, 0, 50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
 		})
 		
-		-- Optional description
+		-- Description
 		local yOffset = 0
 		if data.Content then
 			local descLabel = Create("TextLabel", {
 				Name = "Description",
-				Size = UDim2.new(1, 0, 0, 25),
-				Position = UDim2.new(0, 0, 0, 0),
+				Size = UDim2.new(1, 0, 0, 20),
 				BackgroundTransparency = 1,
 				Text = data.Content,
-				TextColor3 = theme.TextColor,
+				TextColor3 = Theme.TextColor,
 				TextSize = 13,
-				Font = Enum.Font.GothamMedium,
+				Font = Enum.Font.Gotham,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextWrapped = true,
 				ZIndex = 16,
-				Parent = contentFrame
+				Parent = content
 			})
-			
-			if descLabel then
-				descLabel.TextTransparency = 1
-				Create("UIStroke", {
-					Color = theme.TextStrokeColor,
-					Thickness = 1,
-					Transparency = theme.TextStrokeTransparency,
-					Parent = descLabel
-				})
-				Tween(descLabel, {TextTransparency = 0}, 0.2)
-				yOffset = 30
-			end
+			descLabel.TextTransparency = 1
+			Tween(descLabel, {TextTransparency = 0}, 0.2)
+			yOffset = 28
 		end
 		
-		-- Input box
+		-- Input box (Rayfield style)
 		local inputBox = Create("TextBox", {
 			Name = "Input",
-			Size = UDim2.new(1, 0, 0, 45),
+			Size = UDim2.new(1, 0, 0, 38),
 			Position = UDim2.new(0, 0, 0, yOffset),
-			BackgroundColor3 = Color3.fromRGB(20, 20, 20),
-			BackgroundTransparency = 0.3,
+			BackgroundColor3 = Theme.InputBackground,
 			BorderSizePixel = 0,
 			Text = data.Default or "",
 			PlaceholderText = data.Placeholder or "Enter text...",
-			PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
-			TextColor3 = theme.TextColor,
-			TextSize = 15,
+			PlaceholderColor3 = Color3.fromRGB(178, 178, 178),
+			TextColor3 = Theme.TextColor,
+			TextSize = 14,
 			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
-		
-		if inputBox then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = inputBox})
-			Create("UIStroke", {Color = theme.Accent, Thickness = 1.5, Transparency = 0.3, Parent = inputBox})
-			Create("UIPadding", {PaddingLeft = UDim.new(0, 15), PaddingRight = UDim.new(0, 15), Parent = inputBox})
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = inputBox})
+		Create("UIStroke", {Color = Theme.InputStroke, Thickness = 1, Parent = inputBox})
+		Create("UIPadding", {PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = inputBox})
 		
 		-- Buttons container
 		local btnContainer = Create("Frame", {
 			Name = "Buttons",
-			Size = UDim2.new(1, -40, 0, 45),
-			Position = UDim2.new(0, 20, 1, -60),
+			Size = UDim2.new(1, -30, 0, 36),
+			Position = UDim2.new(0, 15, 1, -50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
 		})
 		
-		-- Cancel button
+		-- Cancel button (Rayfield style)
 		local cancelBtn = Create("TextButton", {
 			Name = "Cancel",
-			Size = UDim2.new(0.5, -8, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
-			BackgroundColor3 = theme.ButtonBackground,
-			BackgroundTransparency = 0.3,
+			Size = UDim2.new(0.5, -5, 1, 0),
+			BackgroundColor3 = Theme.ElementBackground,
 			BorderSizePixel = 0,
 			Text = "Cancel",
-			TextColor3 = theme.TextColor,
-			TextSize = 14,
-			Font = Enum.Font.GothamBold,
+			TextColor3 = Theme.TextColor,
+			TextSize = 13,
+			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = btnContainer
 		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = cancelBtn})
+		Create("UIStroke", {Color = Theme.ElementStroke, Thickness = 1, Parent = cancelBtn})
 		
-		if cancelBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = cancelBtn})
-		end
-		
-		-- Confirm button
+		-- Confirm button (Rayfield style)
 		local confirmBtn = Create("TextButton", {
 			Name = "Confirm",
-			Size = UDim2.new(0.5, -8, 1, 0),
-			Position = UDim2.new(0.5, 8, 0, 0),
-			BackgroundColor3 = theme.Accent,
-			BackgroundTransparency = 0.2,
+			Size = UDim2.new(0.5, -5, 1, 0),
+			Position = UDim2.new(0.5, 5, 0, 0),
+			BackgroundColor3 = Theme.Accent,
 			BorderSizePixel = 0,
 			Text = "Confirm",
 			TextColor3 = Color3.new(1, 1, 1),
-			TextSize = 14,
-			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = btnContainer
 		})
-		
-		if confirmBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = confirmBtn})
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = confirmBtn})
 		
 		-- Hover effects
-		if cancelBtn then
-			cancelBtn.MouseEnter:Connect(function() Tween(cancelBtn, {BackgroundTransparency = 0.1}, 0.15) end)
-			cancelBtn.MouseLeave:Connect(function() Tween(cancelBtn, {BackgroundTransparency = 0.3}, 0.15) end)
-		end
-		if confirmBtn then
-			confirmBtn.MouseEnter:Connect(function() Tween(confirmBtn, {BackgroundColor3 = theme.AccentHover}, 0.15) end)
-			confirmBtn.MouseLeave:Connect(function() Tween(confirmBtn, {BackgroundColor3 = theme.Accent}, 0.15) end)
-		end
+		cancelBtn.MouseEnter:Connect(function() Tween(cancelBtn, {BackgroundColor3 = Theme.ElementBackgroundHover}, 0.15) end)
+		cancelBtn.MouseLeave:Connect(function() Tween(cancelBtn, {BackgroundColor3 = Theme.ElementBackground}, 0.15) end)
 		
 		-- Close function
 		local function closeModal()
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
-			if modal then modal:Destroy() end
-			if overlay then overlay:Destroy() end
-		end
-		
-		-- Button callbacks
-		if cancelBtn then
-			cancelBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, nil) end
-			end)
-		end
-		
-		if confirmBtn then
-			confirmBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, inputBox and inputBox.Text or nil) end
-			end)
-		end
-		
-		if closeBtn then
-			closeBtn.MouseButton1Click:Connect(function()
-				closeModal()
-				if data.Callback then pcall(data.Callback, nil) end
-			end)
-		end
-		
-		-- Enter key to confirm
-		if inputBox then
-			inputBox.FocusLost:Connect(function(enterPressed)
-				if enterPressed then
-					closeModal()
-					if data.Callback then pcall(data.Callback, inputBox.Text) end
-				end
-			end)
-			
-			-- Auto focus
 			task.wait(0.25)
-			inputBox:CaptureFocus()
+			modal:Destroy()
+			overlay:Destroy()
 		end
 		
-		return modal
+		cancelBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, nil) end
+		end)
+		
+		confirmBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, inputBox.Text) end
+		end)
+		
+		closeBtn.MouseButton1Click:Connect(function()
+			closeModal()
+			if data.Callback then pcall(data.Callback, nil) end
+		end)
+		
+		-- Enter key
+		inputBox.FocusLost:Connect(function(enterPressed)
+			if enterPressed then
+				closeModal()
+				if data.Callback then pcall(data.Callback, inputBox.Text) end
+			end
+		end)
+		
+		-- Auto focus
+		task.wait(0.2)
+		inputBox:CaptureFocus()
 	end)
-	
-	if not success then
-		warn("RayfieldModal Prompt Error: " .. tostring(err))
-	end
 end
 
 -- ============================================
--- ALERT - SIMPLE DIALOG
+-- ALERT - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Alert(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
+		local width = 380
+		local height = 160
 		
-		local width = 420
-		local height = 180
-		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return end
-		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Alert", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return
-		end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Alert", width, height, self.CurrentImageAsset)
 		
 		-- Content
-		local contentFrame = Create("Frame", {
+		local content = Create("Frame", {
 			Name = "Content",
-			Size = UDim2.new(1, -40, 1, -100),
-			Position = UDim2.new(0, 20, 0, 55),
+			Size = UDim2.new(1, -30, 1, -100),
+			Position = UDim2.new(0, 15, 0, 50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
@@ -1327,113 +1019,80 @@ function RayfieldModalAdult:Alert(data)
 		local descLabel = Create("TextLabel", {
 			Name = "Description",
 			Size = UDim2.new(1, 0, 1, 0),
-			Position = UDim2.new(0, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Text = data.Content or "",
-			TextColor3 = theme.TextColor,
-			TextSize = 15,
-			Font = Enum.Font.GothamMedium,
+			TextColor3 = Theme.TextColor,
+			TextSize = 14,
+			Font = Enum.Font.Gotham,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			TextWrapped = true,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
+		descLabel.TextTransparency = 1
+		Tween(descLabel, {TextTransparency = 0}, 0.2)
 		
-		if descLabel then
-			descLabel.TextTransparency = 1
-			Create("UIStroke", {
-				Color = theme.TextStrokeColor,
-				Thickness = 1.5,
-				Transparency = theme.TextStrokeTransparency,
-				Parent = descLabel
-			})
-			Tween(descLabel, {TextTransparency = 0}, 0.2)
-		end
-		
-		-- OK button
+		-- OK button (Rayfield style)
 		local okBtn = Create("TextButton", {
 			Name = "OK",
-			Size = UDim2.new(0, 140, 0, 40),
-			Position = UDim2.new(0.5, -70, 1, -55),
-			BackgroundColor3 = theme.Accent,
-			BackgroundTransparency = 0.2,
+			Size = UDim2.new(0, 120, 0, 36),
+			Position = UDim2.new(0.5, -60, 1, -50),
+			BackgroundColor3 = Theme.Accent,
 			BorderSizePixel = 0,
 			Text = data.ButtonText or "OK",
 			TextColor3 = Color3.new(1, 1, 1),
-			TextSize = 14,
-			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+			Font = Enum.Font.GothamSemibold,
 			ZIndex = 16,
 			Parent = modal
 		})
-		
-		if okBtn then
-			Create("UICorner", {CornerRadius = UDim.new(0, 10), Parent = okBtn})
-			okBtn.MouseEnter:Connect(function() Tween(okBtn, {BackgroundColor3 = theme.AccentHover}, 0.15) end)
-			okBtn.MouseLeave:Connect(function() Tween(okBtn, {BackgroundColor3 = theme.Accent}, 0.15) end)
-		end
+		Create("UICorner", {CornerRadius = UDim.new(0, 6), Parent = okBtn})
 		
 		-- Close function
 		local function closeModal()
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if descLabel then Tween(descLabel, {TextTransparency = 1}, 0.15) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(descLabel, {TextTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
-			if modal then modal:Destroy() end
-			if overlay then overlay:Destroy() end
-			
+			task.wait(0.25)
+			modal:Destroy()
+			overlay:Destroy()
 			if data.Callback then pcall(data.Callback) end
 		end
 		
-		if okBtn then
-			okBtn.MouseButton1Click:Connect(closeModal)
-		end
-		if closeBtn then
-			closeBtn.MouseButton1Click:Connect(closeModal)
-		end
-		
-		return modal
+		okBtn.MouseButton1Click:Connect(closeModal)
+		closeBtn.MouseButton1Click:Connect(closeModal)
 	end)
-	
-	if not success then
-		warn("RayfieldModal Alert Error: " .. tostring(err))
-	end
 end
 
 -- ============================================
--- LOADING - PROGRESS DIALOG
+-- LOADING - RAYFIELD STYLE
 -- ============================================
 function RayfieldModalAdult:Loading(data)
-	local success, err = pcall(function()
+	local result = {Update = function() end, Close = function() end}
+	
+	pcall(function()
 		local screenGui = GetScreenGui()
-		if not screenGui then return {Update = function() end, Close = function() end} end
+		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
+		local width = 300
+		local height = 130
 		
-		local width = 350
-		local height = 160
-		
-		local overlay = CreateOverlay(screenGui, theme, self.CurrentImageAsset)
-		if not overlay then return {Update = function() end, Close = function() end} end
-		
-		local modal, topbar, titleLabel, closeBtn, glow, stroke = CreateModalBase(screenGui, data.Title or "Loading", width, height, theme, self.CurrentImageAsset)
-		if not modal then
-			overlay:Destroy()
-			return {Update = function() end, Close = function() end}
-		end
-		
-		if closeBtn then closeBtn.Visible = false end
+		local overlay = CreateOverlay(screenGui)
+		local modal, topbar, titleLabel, closeBtn, shadow, bgImage = CreateModalBase(screenGui, data.Title or "Loading", width, height, self.CurrentImageAsset)
+		closeBtn.Visible = false
 		
 		-- Content
-		local contentFrame = Create("Frame", {
+		local content = Create("Frame", {
 			Name = "Content",
-			Size = UDim2.new(1, -40, 1, -70),
-			Position = UDim2.new(0, 20, 0, 55),
+			Size = UDim2.new(1, -30, 1, -60),
+			Position = UDim2.new(0, 15, 0, 50),
 			BackgroundTransparency = 1,
 			ZIndex = 15,
 			Parent = modal
@@ -1442,94 +1101,76 @@ function RayfieldModalAdult:Loading(data)
 		-- Spinner
 		local spinner = Create("ImageLabel", {
 			Name = "Spinner",
-			Size = UDim2.new(0, 40, 0, 40),
-			Position = UDim2.new(0.5, 0, 0, 15),
+			Size = UDim2.new(0, 32, 0, 32),
+			Position = UDim2.new(0.5, 0, 0, 10),
 			AnchorPoint = Vector2.new(0.5, 0),
 			BackgroundTransparency = 1,
 			Image = "rbxassetid://6014261993",
-			ImageColor3 = theme.Accent,
+			ImageColor3 = Theme.Accent,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
 		
 		-- Status text
 		local statusLabel = Create("TextLabel", {
 			Name = "Status",
-			Size = UDim2.new(1, 0, 0, 35),
-			Position = UDim2.new(0, 0, 0, 60),
+			Size = UDim2.new(1, 0, 0, 30),
+			Position = UDim2.new(0, 0, 0, 50),
 			BackgroundTransparency = 1,
 			Text = data.Content or "Please wait...",
-			TextColor3 = theme.TextColor,
+			TextColor3 = Theme.TextColor,
 			TextSize = 14,
-			Font = Enum.Font.GothamMedium,
+			Font = Enum.Font.Gotham,
 			ZIndex = 16,
-			Parent = contentFrame
+			Parent = content
 		})
-		
-		if statusLabel then
-			statusLabel.TextTransparency = 1
-			Create("UIStroke", {
-				Color = theme.TextStrokeColor,
-				Thickness = 1,
-				Transparency = theme.TextStrokeTransparency,
-				Parent = statusLabel
-			})
-			Tween(statusLabel, {TextTransparency = 0}, 0.2)
-		end
+		statusLabel.TextTransparency = 1
+		Tween(statusLabel, {TextTransparency = 0}, 0.2)
 		
 		-- Spinner rotation
 		local rotation = 0
 		local connection
 		connection = RunService.Heartbeat:Connect(function()
-			rotation = rotation + 6
-			if spinner then spinner.Rotation = rotation end
+			rotation = rotation + 5
+			spinner.Rotation = rotation
 		end)
 		
 		-- Control object
-		local control = {}
-		
-		function control:Update(text)
+		result.Update = function(text)
 			if statusLabel then statusLabel.Text = text end
 		end
 		
-		function control:Close()
+		result.Close = function()
 			if connection then connection:Disconnect() end
 			Tween(modal, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 			Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 			Tween(modal, {BackgroundTransparency = 1}, 0.2)
-			if glow then Tween(glow, {ImageTransparency = 1}, 0.2) end
-			if statusLabel then Tween(statusLabel, {TextTransparency = 1}, 0.15) end
-			if titleLabel then Tween(titleLabel, {TextTransparency = 1}, 0.15) end
+			Tween(shadow, {ImageTransparency = 1}, 0.15)
+			Tween(statusLabel, {TextTransparency = 1}, 0.15)
+			Tween(titleLabel, {TextTransparency = 1}, 0.15)
+			if bgImage then Tween(bgImage, {ImageTransparency = 1}, 0.15) end
 			
-			task.wait(0.3)
+			task.wait(0.25)
 			if modal then modal:Destroy() end
 			if overlay then overlay:Destroy() end
 		end
-		
-		return control
 	end)
 	
-	if not success then
-		warn("RayfieldModal Loading Error: " .. tostring(err))
-		return {Update = function() end, Close = function() end}
-	end
-	
-	return success
+	return result
 end
 
 -- ============================================
--- IMAGE PREVIEW - SHOW FULL IMAGE
+-- IMAGE PREVIEW
 -- ============================================
 function RayfieldModalAdult:ShowImage(data)
-	local success, err = pcall(function()
+	pcall(function()
 		local screenGui = GetScreenGui()
 		if not screenGui then return end
 		
-		local theme = self.CurrentTheme
 		self.ModalCount = self.ModalCount + 1
 		
-		-- Load image from URL if provided
-		local imageAsset = ""
+		-- Load image
+		local imageAsset = nil
 		if data.ImageURL then
 			imageAsset = LoadImageFromURL(data.ImageURL, "preview")
 		elseif data.Image then
@@ -1539,58 +1180,119 @@ function RayfieldModalAdult:ShowImage(data)
 		local width = data.Width or 500
 		local height = data.Height or 500
 		
-		local overlay = Create("Frame", {
-			Name = "Overlay",
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-			BackgroundTransparency = 1,
-			BorderSizePixel = 0,
-			ZIndex = 1,
-			Active = false,
-			Parent = screenGui
-		})
+		local overlay = CreateOverlay(screenGui)
 		
-		Tween(overlay, {BackgroundTransparency = 0.5}, 0.3)
-		
-		-- Image container
+		-- Container
 		local container = Create("Frame", {
 			Name = "ImageContainer",
-			Size = UDim2.new(0, width, 0, height),
+			Size = UDim2.new(0, width, 0, 0),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
 			AnchorPoint = Vector2.new(0.5, 0.5),
-			BackgroundColor3 = Color3.fromRGB(15, 15, 15),
-			BackgroundTransparency = 1,
+			BackgroundColor3 = Theme.Background,
 			BorderSizePixel = 0,
 			ZIndex = 10,
 			Parent = screenGui
 		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = container})
+		Create("UIStroke", {Color = Theme.ElementStroke, Thickness = 1, Parent = container})
 		
-		if container then
-			Create("UICorner", {CornerRadius = UDim.new(0, 15), Parent = container})
-		end
+		-- Shadow
+		local shadow = Create("ImageLabel", {
+			Name = "Shadow",
+			Size = UDim2.new(1, 30, 1, 30),
+			Position = UDim2.new(0, -15, 0, -15),
+			BackgroundTransparency = 1,
+			Image = "rbxassetid://6014261993",
+			ImageColor3 = Theme.Shadow,
+			ImageTransparency = 1,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(49, 49, 450, 450),
+			ZIndex = 9,
+			Parent = container
+		})
 		
 		-- Image
 		local imageLabel = Create("ImageLabel", {
 			Name = "Image",
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundTransparency = 1,
-			Image = imageAsset,
+			Image = imageAsset or "",
 			ScaleType = Enum.ScaleType.Crop,
 			ImageTransparency = 1,
 			ZIndex = 11,
 			Parent = container
 		})
+		Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = imageLabel})
 		
-		if imageLabel then
-			Create("UICorner", {CornerRadius = UDim.new(0, 15), Parent = imageLabel})
+		-- Title bar (optional)
+		local titleBar = nil
+		if data.Title then
+			titleBar = Create("Frame", {
+				Name = "TitleBar",
+				Size = UDim2.new(1, 0, 0, 45),
+				BackgroundColor3 = Theme.Topbar,
+				BorderSizePixel = 0,
+				ZIndex = 12,
+				Parent = container
+			})
+			Create("UICorner", {CornerRadius = UDim.new(0, 8), Parent = titleBar})
+			
+			Create("TextLabel", {
+				Name = "Title",
+				Size = UDim2.new(1, -50, 1, 0),
+				Position = UDim2.new(0, 15, 0, 0),
+				BackgroundTransparency = 1,
+				Text = data.Title,
+				TextColor3 = Theme.TextColor,
+				TextSize = 16,
+				Font = Enum.Font.GothamSemibold,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				ZIndex = 13,
+				Parent = titleBar
+			})
+			
+			-- Close button
+			local closeBtn = Create("TextButton", {
+				Name = "Close",
+				Size = UDim2.new(0, 30, 0, 30),
+				Position = UDim2.new(1, -38, 0.5, 0),
+				AnchorPoint = Vector2.new(0, 0.5),
+				BackgroundTransparency = 1,
+				Text = "",
+				ZIndex = 13,
+				Parent = titleBar
+			})
+			
+			Create("ImageLabel", {
+				Name = "Icon",
+				Size = UDim2.new(0, 16, 0, 16),
+				Position = UDim2.new(0.5, 0, 0.5, 0),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				BackgroundTransparency = 1,
+				Image = "rbxassetid://3926305904",
+				ImageRectSize = Vector2.new(48, 48),
+				ImageRectOffset = Vector2.new(288, 288),
+				ImageColor3 = Theme.TextColor,
+				ZIndex = 14,
+				Parent = closeBtn
+			})
+			
+			closeBtn.MouseButton1Click:Connect(function()
+				Tween(container, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
+				Tween(overlay, {BackgroundTransparency = 1}, 0.2)
+				Tween(imageLabel, {ImageTransparency = 1}, 0.15)
+				Tween(shadow, {ImageTransparency = 1}, 0.15)
+				
+				task.wait(0.25)
+				container:Destroy()
+				overlay:Destroy()
+			end)
 		end
 		
 		-- Animate in
-		if container then
-			container.Size = UDim2.new(0, width, 0, 0)
-			Tween(container, {Size = UDim2.new(0, width, 0, height)}, 0.4, Enum.EasingStyle.Back)
-		end
+		Tween(container, {Size = UDim2.new(0, width, 0, height)}, 0.3, Enum.EasingStyle.Back)
 		Tween(imageLabel, {ImageTransparency = 0}, 0.3)
+		Tween(shadow, {ImageTransparency = 0.82}, 0.3)
 		
 		-- Auto close
 		if data.Duration then
@@ -1600,20 +1302,15 @@ function RayfieldModalAdult:ShowImage(data)
 					Tween(container, {Size = UDim2.new(0, width, 0, 0)}, 0.2, Enum.EasingStyle.Back)
 					Tween(overlay, {BackgroundTransparency = 1}, 0.2)
 					Tween(imageLabel, {ImageTransparency = 1}, 0.15)
+					Tween(shadow, {ImageTransparency = 1}, 0.15)
 					
-					task.wait(0.3)
-					if container then container:Destroy() end
-					if overlay then overlay:Destroy() end
+					task.wait(0.25)
+					container:Destroy()
+					overlay:Destroy()
 				end
 			end)
 		end
-		
-		return container
 	end)
-	
-	if not success then
-		warn("RayfieldModal ShowImage Error: " .. tostring(err))
-	end
 end
 
 return RayfieldModalAdult
