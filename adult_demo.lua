@@ -1,251 +1,144 @@
 --[[
 	
 	Rayfield Modal Adult - Demo Script
-	⚠️ 18+ VERSION
-	
-	Load with:
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/vyvegroup/RayfieldModal/main/adult_demo.lua"))()
+	⚠️ 18+ VERSION - Rayfield Style UI
 	
 ]]--
 
-print("=== Rayfield Modal Adult Demo Started ===")
+print("=== Rayfield Modal Adult Demo ===")
+print("Loading library...")
 
--- Load RayfieldModal Adult Library
-local RayfieldModal = loadstring(game:HttpGet("https://raw.githubusercontent.com/vyvegroup/RayfieldModal/main/adult_source.lua"))()
+-- Load Library
+local success, RayfieldModal = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/vyvegroup/RayfieldModal/main/adult_source.lua"))()
+end)
 
--- ============================================
--- PRELOAD ALL THEMES (Recommended)
--- ============================================
+if not success or not RayfieldModal then
+    warn("Failed to load RayfieldModal!")
+    return
+end
+
+print("✓ Library loaded successfully!")
+
+-- Check executor capabilities
+print("\n--- Executor Capabilities ---")
+print("writefile:", writefile ~= nil)
+print("readfile:", readfile ~= nil)
+print("getcustomasset:", getcustomasset ~= nil)
+print("getsynasset:", getsynasset ~= nil)
+print("makefolder:", makefolder ~= nil)
+print("isfolder:", isfolder ~= nil)
+print("gethui:", gethui ~= nil)
+print("-----------------------------\n")
+
+-- Preload themes
 print("[*] Preloading theme images...")
 RayfieldModal:PreloadThemes()
 
 task.wait(1)
 
--- ============================================
--- DEMO 1: PINK PASSION THEME
--- ============================================
+-- Test 1: PinkPassion Theme
 print("[1] Testing PinkPassion Theme...")
 RayfieldModal:SetTheme("PinkPassion")
 
 RayfieldModal:Notify({
-	Title = "Welcome to Adult Version!",
-	Content = "This is RayfieldModal Adult Edition with beautiful background themes. Enjoy the premium experience!",
-	Duration = 5
+    Title = "Pink Passion Theme",
+    Content = "This is the Pink Passion theme with NSFW background. Check if image appears!",
+    Duration = 5
 })
 
 task.wait(6)
 
--- ============================================
--- DEMO 2: MIDNIGHT DESIRES THEME
--- ============================================
+-- Test 2: MidnightDesires Theme
 print("[2] Testing MidnightDesires Theme...")
 RayfieldModal:SetTheme("MidnightDesires")
 
 RayfieldModal:Confirm({
-	Title = "Enable Premium Features?",
-	Content = "Would you like to unlock all premium features? This includes custom themes, priority support, and exclusive content.",
-	YesText = "Unlock",
-	NoText = "Maybe Later",
-	Callback = function(result)
-		if result then
-			print("[2] User enabled premium features")
-			RayfieldModal:Notify({
-				Title = "Premium Activated!",
-				Content = "All features are now unlocked. Thank you for your support!",
-				Duration = 4
-			})
-		end
-	end
+    Title = "Midnight Desires",
+    Content = "This is the Midnight Desires theme. Do you see the background image?",
+    YesText = "Yes, I see it!",
+    NoText = "No image :(",
+    Callback = function(result)
+        if result then
+            print("[2] User can see the image!")
+        else
+            print("[2] User cannot see the image - need to check executor")
+        end
+    end
 })
 
 task.wait(6)
 
--- ============================================
--- DEMO 3: CONSOLE WITH IMAGE BACKGROUND
--- ============================================
+-- Test 3: Console with Image Background
 print("[3] Testing Console modal...")
 RayfieldModal:SetTheme("PinkPassion")
 
 RayfieldModal:Console({
-	Title = "Script Output",
-	Content = [[-- RayfieldModal Adult Edition
--- Version 2.0
+    Title = "Script Console",
+    Content = [[-- RayfieldModal Adult Edition
+-- Rayfield Style UI
 
 local RayfieldModal = loadstring(game:HttpGet("URL"))()
 
--- Set your favorite theme
+-- Available Themes:
+-- PinkPassion - Pink aesthetic
+-- MidnightDesires - Dark purple
+-- DarkSeduction - Warm orange
+-- OceanFantasy - Cool cyan
+-- PurpleHaze - Mystical purple
+
+-- Set theme
 RayfieldModal:SetTheme("PinkPassion")
--- Or: SetTheme("MidnightDesires")
--- Or: SetTheme("DarkSeduction")
--- Or: SetTheme("OceanFantasy")
--- Or: SetTheme("PurpleHaze")
 
--- Premium Features:
--- ✓ Custom Image Backgrounds
--- ✓ Non-blocking UI
--- ✓ Smooth Animations
--- ✓ Theme Caching
--- ✓ Multiple Themes
+-- Or custom image URL
+RayfieldModal:SetCustomImage("YOUR_IMAGE_URL")]],
+    Language = "lua",
+    Width = 500,
+    Height = 350
+})
 
--- Example Usage:
-RayfieldModal:Notify({
-    Title = "Hello!",
-    Content = "Welcome to Adult Edition",
+task.wait(7)
+
+-- Test 4: Image Preview (Direct Image Show)
+print("[4] Testing direct image preview...")
+RayfieldModal:ShowImage({
+    Title = "Direct Image Preview",
+    ImageURL = "https://api-cdn.rule34.xxx/images/2198/20c7a55d5d03d0143ad13effebb9bb7e.jpeg",
+    Width = 500,
+    Height = 500,
     Duration = 5
 })
 
--- Custom image theme:
-RayfieldModal:SetCustomImage("YOUR_IMAGE_URL")]],
-	Language = "lua",
-	Width = 500,
-	Height = 380
-})
+task.wait(6)
 
-task.wait(7)
+-- Test 5: Different Themes
+print("[5] Testing all themes...")
 
--- ============================================
--- DEMO 4: INPUT PROMPT
--- ============================================
-print("[4] Testing Prompt modal...")
-RayfieldModal:SetTheme("MidnightDesires")
+local themes = {"DarkSeduction", "OceanFantasy", "PurpleHaze"}
 
-RayfieldModal:Prompt({
-	Title = "Enter Settings",
-	Content = "Please enter your preferred value:",
-	Placeholder = "Enter text...",
-	Default = "",
-	Callback = function(text)
-		if text and text ~= "" then
-			print("[4] User entered:", text)
-			RayfieldModal:Notify({
-				Title = "Settings Saved",
-				Content = "Value set to: " .. text,
-				Duration = 3
-			})
-		end
-	end
-})
-
-task.wait(7)
-
--- ============================================
--- DEMO 5: ALERT DIALOG
--- ============================================
-print("[5] Testing Alert modal...")
-RayfieldModal:SetTheme("PinkPassion")
-
-RayfieldModal:Alert({
-	Title = "Important Notice",
-	Content = "This is the Adult Edition of RayfieldModal. All features are unlocked and ready to use!",
-	ButtonText = "Got it!",
-	Callback = function()
-		print("[5] Alert dismissed")
-	end
-})
-
-task.wait(5)
-
--- ============================================
--- DEMO 6: LOADING DIALOG
--- ============================================
-print("[6] Testing Loading modal...")
-RayfieldModal:SetTheme("MidnightDesires")
-
-local loading = RayfieldModal:Loading({
-	Title = "Processing",
-	Content = "Initializing..."
-})
-
-task.wait(1)
-loading:Update("Loading assets...")
-task.wait(1)
-loading:Update("Connecting to server...")
-task.wait(1)
-loading:Update("Almost ready...")
-task.wait(0.5)
-loading:Close()
-
-print("[6] Loading complete!")
-
-task.wait(1)
-
--- ============================================
--- DEMO 7: THEME SHOWCASE
--- ============================================
-print("[7] Showcasing all themes...")
-
-local themes = {
-	{ name = "PinkPassion", desc = "Beautiful pink aesthetic" },
-	{ name = "MidnightDesires", desc = "Dark and mysterious" },
-	{ name = "DarkSeduction", desc = "Warm and intense" },
-	{ name = "OceanFantasy", desc = "Cool and refreshing" },
-	{ name = "PurpleHaze", desc = "Mystical purple vibes" }
-}
-
-for i, theme in ipairs(themes) do
-	RayfieldModal:SetTheme(theme.name)
-	
-	RayfieldModal:Notify({
-		Title = theme.name,
-		Content = theme.desc .. " - Theme " .. i .. "/" .. #themes,
-		Duration = 2.5
-	})
-	
-	task.wait(3.5)
+for _, themeName in ipairs(themes) do
+    RayfieldModal:SetTheme(themeName)
+    
+    RayfieldModal:Notify({
+        Title = themeName,
+        Content = "Testing " .. themeName .. " theme. Check for background image!",
+        Duration = 2
+    })
+    
+    task.wait(3)
 end
 
--- ============================================
--- DEMO 8: CUSTOM IMAGE THEME
--- ============================================
-print("[8] Testing Custom Image Theme...")
-
-RayfieldModal:SetCustomImage("https://api-cdn.rule34.xxx/images/2198/20c7a55d5d03d0143ad13effebb9bb7e.jpeg")
-
-RayfieldModal:Confirm({
-	Title = "Custom Theme Loaded!",
-	Content = "This modal uses a custom image URL as the background. You can set any image URL as your theme!",
-	YesText = "Awesome!",
-	NoText = "Close",
-	Callback = function(result)
-		if result then
-			print("[8] User approved custom theme")
-		end
-	end
-})
-
-task.wait(5)
-
--- ============================================
--- DEMO 9: FULLSCREEN IMAGE PREVIEW
--- ============================================
-print("[9] Testing Image Preview...")
-
-RayfieldModal:ShowImage({
-	Title = "Premium Artwork",
-	ImageURL = "https://rule34.porn/media/2024/06/Naked-Girl-by-Nat-the-LichOriginal.webp",
-	Width = 550,
-	Height = 550,
-	Duration = 6
-})
-
-task.wait(7)
-
--- ============================================
--- DEMO COMPLETE
--- ============================================
+-- Final
 RayfieldModal:SetTheme("PinkPassion")
 
 RayfieldModal:Notify({
-	Title = "Demo Complete!",
-	Content = "Thank you for trying RayfieldModal Adult Edition! All themes and features are now available for your scripts.",
-	Duration = 6
+    Title = "Demo Complete!",
+    Content = "If you see background images, everything works! If not, your executor may not support getcustomasset.",
+    Duration = 6
 })
 
-print("=== Rayfield Modal Adult Demo Complete ===")
-print("Available Themes:")
-print("  - PinkPassion")
-print("  - MidnightDesires")
-print("  - DarkSeduction")
-print("  - OceanFantasy")
-print("  - PurpleHaze")
-print("  - Custom (use SetCustomImage)")
+print("=== Demo Complete ===")
+print("\nIf images are not showing:")
+print("1. Check if your executor supports 'getcustomasset'")
+print("2. Check if 'writefile' works")
+print("3. Some executors need 'getsynasset' instead")
